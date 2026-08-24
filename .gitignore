@@ -1,0 +1,3 @@
+.env
+VectorStore/
+__pycache__/
