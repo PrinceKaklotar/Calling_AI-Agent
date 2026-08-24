@@ -99,17 +99,18 @@ else:
 
 # RAG step : 4 Retriver
 
-retriver = vector_store.as_retriever(
+retriever = vector_store.as_retriever(
     search_kwargs={
-        "k":3
-    }
+        "k": 3
+    },
+    search_type="similarity"
 )
 
 print("\n✅ Retriever Created Successfully!\n")
 
 query = "tell me about membership plan"
 
-retrevied_docs = retriver.invoke(query)
+retrevied_docs = retriever.invoke(query)
 
 # for i,chunk in enumerate(retrevied_docs):
 #     print("\n {i+1} Chunk : ")
@@ -144,18 +145,45 @@ model = ChatHuggingFace(llm=llm)
 # result = model.invoke("What is capital of the france ?")
 
 # print(result.content)
+ 
+promt_text =  """You are the official AI assistant for PR Gym.
+                Your job is ONLY to answer questions related to PR Gym.
 
+                IMPORTANT RULES:
+
+                1. Answer ONLY using the information provided in the Context.
+                2. Never use your general knowledge to answer.
+                3. Never invent, guess, or assume information.
+                4. If the answer is not clearly available in the Context,
+                respond exactly:
+
+                "Sorry, I don't have that information about PR Gym."
+
+                5. If the user asks something unrelated to PR Gym, respond:
+
+                "Sorry, I can only help with questions related to PR Gym."
+
+                6. Keep your answer clear, natural, and concise.
+                7. Do not mention the words "context", "retriever", "RAG",
+                "knowledge base", or "vector database" to the customer.
+
+                Context:
+                {context}
+
+                Customer Question:
+                {question}
+
+                Answer:"""  
+                        
 promt = PromptTemplate(
-    template="Hello LLM Model ! You are good in understanding the data and given question-answer from that data. you are master in that skill. so basically i have some data content and one user query. you have to give me answer from that content only not outside the content. if user query's answer not in the given content , just say sorry ! please ask releted to our buisness. sonething like that give good response to user. and if answer available in the content, provide accurate and good answer to the user. here the content you have to use {context} and this is user quesry question {question}",
-    
+    template= promt_text,  
     input_variables=['context','question']
-    
 )
 
 parser = StrOutputParser()
 
 parellel_chain = RunnableParallel({
-       "context" : retriver | RunnableLambda(format_docs),
+       "context" : retriever | RunnableLambda(format_docs),
        "question" : RunnablePassthrough()
    })
 
