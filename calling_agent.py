@@ -19,6 +19,9 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS,chroma
 from langchain_core.runnables import RunnablePassthrough,RunnableLambda,RunnableSequence,RunnableParallel
 
+#for the chat history
+from langchain_core.messages import SystemMessage,AIMessage,HumanMessage
+
 load_dotenv()
 
 # now we load our buisness data .md files 
@@ -143,8 +146,29 @@ llm = HuggingFaceEndpoint(
 model = ChatHuggingFace(llm=llm)
 
 # result = model.invoke("What is capital of the france ?")
-
 # print(result.content)
+
+Chat_History = [
+    SystemMessage(
+        content = "You are an officialy AI assitant at PR Gym."
+    )
+]
+
+def format_history(chatHistory):
+    history=""
+    
+    for message in chatHistory:
+        
+        if isinstance(message,HumanMessage):
+            history += f"Customer : {message.content}\n"
+            
+        elif isinstance(message,AIMessage):
+            history += f"Gym AI : {message.content}\n"
+    
+
+    return history 
+        
+
  
 promt_text =  """You are the official AI assistant for PR Gym.
                 Your job is ONLY to answer questions related to PR Gym.
@@ -166,6 +190,9 @@ promt_text =  """You are the official AI assistant for PR Gym.
                 6. Keep your answer clear, natural, and concise.
                 7. Do not mention the words "context", "retriever", "RAG",
                 "knowledge base", or "vector database" to the customer.
+                
+                Conversation_History:
+                {Chat_History}
 
                 Context:
                 {context}
@@ -177,14 +204,17 @@ promt_text =  """You are the official AI assistant for PR Gym.
                         
 promt = PromptTemplate(
     template= promt_text,  
-    input_variables=['context','question']
+    input_variables=['context','question','Chat_History']
 )
 
 parser = StrOutputParser()
 
 parellel_chain = RunnableParallel({
        "context" : retriever | RunnableLambda(format_docs),
-       "question" : RunnablePassthrough()
+       "question" : RunnablePassthrough(),
+       "Chat_History" : RunnableLambda(
+           lambda _: format_history(Chat_History)
+       )
    })
 
 
@@ -203,8 +233,16 @@ while True:
     if User_Query.lower() == 'quit' or User_Query.lower() == 'exit':
         print("\n🙏 Thank you for visiting PR GYM! Have a nice day! 😊")
         break
-
+    
     Result = RAG_chain.invoke(User_Query)
+    
+    Chat_History.append(
+        HumanMessage(content=User_Query)
+    )
+    
+    Chat_History.append(
+        AIMessage(content=Result)
+    )
 
     print("🤖 Gym AI:", Result)
 
