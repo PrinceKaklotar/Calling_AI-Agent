@@ -22,105 +22,106 @@ from database.database import (
 @tool
 def check_availability(booking_date: str, booking_time: str):
         """
-            Check whether a PR Gym trial booking slot is available
-            for the specified date and time.
+            Check whether a PR Gym free-trial slot is available.
 
-            USE THIS TOOL when the customer wants to:
-            - check if a trial slot is available
-            - know whether a specific date and time is free
-            - ask if they can come for a trial at a particular date and time
-            - check a slot before making a booking
+            AVAILABILITY INTENT:
+            Use this tool when the user wants to CHECK whether a specific
+            trial date and time is available.
+
+            Examples:
+            - "Is September 5 at 6 PM available?"
+            - "Is tomorrow at 7 PM free?"
+            - "Can I take a trial at 5 PM tomorrow?"
+            - "Is that slot available?"
 
             REQUIRED INFORMATION:
-            - booking_date: The requested trial date.
-            - booking_time: The requested trial time.
+            - booking_date
+            - booking_time
 
             IMPORTANT:
-            - This tool ONLY checks slot availability.
-            - It does NOT create a booking.
-            - It does NOT cancel a booking.
-            - Do NOT use this tool for general PR Gym questions,
-            membership information, pricing, facilities, or timings.
-
-            EXAMPLES:
-            "Is tomorrow at 6 PM available?"
-            "Is September 5 at 7 PM free?"
-            "Can I take a trial at 5 PM tomorrow?"
-
-            For these requests, use this tool to check the requested slot.
+            - If the user wants to check availability but the date or time
+            is missing, DO NOT call this tool.
+            - Ask the user for the missing date and/or time.
+            - This tool ONLY checks availability.
+            - This tool does NOT create a booking.
+            - This tool does NOT cancel a booking.
+            - Do not use this tool for general PR Gym questions.
         """
-# now we call our function 
-        return db_check_availability(booking_date,booking_time)
+        # now we call our function 
 
+        return db_check_availability(booking_date,booking_time)
 
 @tool
 def add_booking(customer_name:str, phone_number:str, booking_date:str, booking_time:str):
     """
-    Create a new PR Gym trial booking for the customer.
-
-    USE THIS TOOL when the customer explicitly wants to:
-    - book a trial
-    - reserve a trial slot
-    - make an appointment for a trial
-    - confirm a trial booking
-
-    REQUIRED INFORMATION:
-    - customer_name: Customer's name.
-    - phone_number: Customer's phone number.
-    - booking_date: Date of the trial.
-    - booking_time: Time of the trial.
-
-    IMPORTANT:
-    - This tool CREATES a booking in the PR Gym booking system.
-    - It should only be used when the customer wants to actually
-      make a booking.
-    - It is NOT a tool for checking general PR Gym information.
-    - It is NOT a tool for cancelling a booking.
-    - The requested date and time must be provided before creating
-      the booking.
-    - The booking system will determine whether the requested slot
-      can be booked.
-
-    EXAMPLES:
-    "Book me a trial tomorrow at 6 PM."
-    "I want to reserve September 5 at 7 PM."
-    "Please book my trial for 5 PM tomorrow."
-
-    For these requests, use this tool to create the booking.
-    """
+            Create a PR Gym free-trial booking.
     
+            BOOKING INTENT:
+            If the user says they want to book, reserve, schedule, or take
+            a free trial, treat this as a BOOKING REQUEST even if they have
+            not provided all required information.
+    
+            Examples:
+            - "I want to book a free trial."
+            - "I want a free trial."
+            - "Can I book a trial?"
+            - "I want to reserve a trial slot."
+            - "I would like to book a gym trial."
+            - similer kind of question releted to trial, free trial , book the trial
+    
+            REQUIRED INFORMATION:
+            - customer_name
+            - phone_number
+            - booking_date
+            - booking_time
+    
+            IMPORTANT:
+            - If the user has booking intent but one or more required
+            details are missing, DO NOT call this tool.
+            - Instead, ask the user for the missing required information.
+            - NEVER send an incomplete booking request to the RAG/knowledge
+            answering process.
+            - Call this tool only when all required booking information
+            is available.
+            - This tool CREATES the actual booking.
+            - Do not use this tool for availability checks,
+            cancellation, or general PR Gym questions.
+    """
     return db_add_booking(customer_name, phone_number, booking_date, booking_time)
 
 @tool
-
 def cansel_booking(booking_id : int):
     """
-    Cancel an existing PR Gym trial booking using its booking ID.
+            Cancel an existing PR Gym free-trial booking.
 
-    USE THIS TOOL when the customer explicitly wants to:
-    - cancel an existing trial booking
-    - remove a previously made booking
-    - cancel an appointment and provides the booking ID
+            CANCELLATION INTENT:
+            If the user says they want to cancel, remove, or delete an
+            existing trial booking, treat it as a CANCELLATION REQUEST.
 
-    REQUIRED INFORMATION:
-    - booking_id: The unique booking ID of the booking
-      that the customer wants to cancel.
+            Examples:
+            - "I want to cancel my booking."
+            - "Cancel my trial."
+            - "I want to cancel my slot."
+            - "Please cancel my booking."
+            - "Cancel booking 14."
 
-    IMPORTANT:
-    - This tool ONLY cancels an existing booking.
-    - It does NOT create a new booking.
-    - It does NOT check general slot availability.
-    - Do NOT use this tool when the customer only wants to
-      know whether a slot is available.
-    - Do NOT use this tool without a valid booking ID.
+            REQUIRED INFORMATION:
+            - booking_id
 
-    EXAMPLES:
-    "Cancel my booking 12."
-    "I want to cancel booking ID 25."
-    "Please cancel my trial booking, ID 7."
-
-    For these requests, use this tool to cancel the specified booking.
-    """
+            IMPORTANT:
+            - If the user wants to cancel but has NOT provided the booking ID,
+            DO NOT call this tool.
+            - Ask the user to provide the booking ID.
+            - If the user already provided the booking ID, do not ask for it again.
+            - Call this tool only when the user explicitly wants to cancel
+            AND a booking_id is available.
+            - If the user only asks what is required to cancel a booking,
+            answer that the booking ID is required and DO NOT call this tool.
+            - This tool ONLY cancels an existing booking.
+            - This tool does NOT create a booking.
+            - This tool does NOT check availability.
+            - Do not use this tool for general PR Gym questions.
+        """
     
     # call the function which is written in databse.py
     return db_cansel_booking(booking_id)
@@ -141,8 +142,8 @@ def cansel_booking(booking_id : int):
 #     "booking_time": "6:00 PM"
 # })
 
-cansel_booking.invoke({
-    "booking_id" : 5
-})
+# cansel_booking.invoke({
+#     "booking_id" : 5
+# })
 
 

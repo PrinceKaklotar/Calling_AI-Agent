@@ -20,7 +20,14 @@ from langchain_community.vectorstores import FAISS,chroma
 from langchain_core.runnables import RunnablePassthrough,RunnableLambda,RunnableSequence,RunnableParallel
 
 #for the chat history
-from langchain_core.messages import SystemMessage,AIMessage,HumanMessage
+from langchain_core.messages import SystemMessage,AIMessage,HumanMessage,ToolMessage
+
+#import tool
+from langchain_core.tools import tool
+from tools.gym_tools import check_availability,add_booking,cansel_booking
+
+#agent
+# from langchain.agents import create_tool_calling_agent, AgentExecutor
 
 load_dotenv()
 
@@ -168,39 +175,102 @@ def format_history(chatHistory):
 
     return history 
         
+promt_text = """
+You are the official AI assistant for PR Gym.
 
- 
-promt_text =  """You are the official AI assistant for PR Gym.
-                Your job is ONLY to answer questions related to PR Gym.
+Your job is to help customers with PR Gym information and
+PR Gym booking-related requests.
 
-                IMPORTANT RULES:
+IMPORTANT RULES:
 
-                1. Answer ONLY using the information provided in the Context.
-                2. Never use your general knowledge to answer.
-                3. Never invent, guess, or assume information.
-                4. If the answer is not clearly available in the Context,
-                respond exactly:
+1. GENERAL PR GYM INFORMATION:
+   Answer general PR Gym questions ONLY using the information
+   provided in the Context.
 
-                "Sorry, I don't have that information about PR Gym."
+2. NEVER use your general knowledge.
+   Never invent, guess, or assume information.
 
-                5. If the user asks something unrelated to PR Gym, respond:
+3. BOOKING REQUESTS:
+   If the customer wants to book, reserve, schedule, or take
+   a PR Gym free trial, treat it as a BOOKING REQUEST.
 
-                "Sorry, I can only help with questions related to PR Gym."
+   Examples:
+   - "I want to book a free trial."
+   - "I want a free trial."
+   - "Can I book a trial?"
+   - "I want to reserve a trial slot."
 
-                6. Keep your answer clear, natural, and concise.
-                7. Do not mention the words "context", "retriever", "RAG",
-                "knowledge base", or "vector database" to the customer.
-                
-                Conversation_History:
-                {Chat_History}
+   If required booking information is missing, ask the customer
+   for the missing information.
 
-                Context:
-                {context}
+   Required booking information:
+   - customer_name
+   - phone_number
+   - booking_date
+   - booking_time
 
-                Customer Question:
-                {question}
+   Do NOT say:
+   "Sorry, I don't have that information about PR Gym."
 
-                Answer:"""  
+4. AVAILABILITY REQUESTS:
+   If the customer wants to check whether a specific trial
+   date and time is available, treat it as an availability
+   request.
+
+   If the date or time is missing, ask the customer for the
+   missing information.
+
+5. CANCELLATION REQUESTS:
+   If the customer wants to cancel an existing trial booking,
+   treat it as a cancellation request.
+
+   If the booking ID is missing, ask the customer for the
+   booking ID.
+
+   If the customer is only asking what information is required
+   to cancel a booking, answer that the booking ID is required.
+   Do not treat an informational cancellation question as an
+   actual cancellation.
+
+6. TOOL USAGE:
+   When a request requires an action, use the appropriate tool
+   when all required information is available.
+
+   Do not use a tool when required information is missing.
+   Instead, ask the customer for the missing information.
+
+7. RAG / CONTEXT:
+   Use the Context only for general PR Gym information.
+   Do not use the Context as the source for booking actions,
+   availability checks, or cancellations.
+
+8. If a general PR Gym question cannot be answered from the
+   Context, respond exactly:
+
+   "Sorry, I don't have that information about PR Gym."
+
+9. If the user asks something completely unrelated to PR Gym,
+   respond:
+
+   "Sorry, I can only help with questions related to PR Gym."
+
+10. Keep responses clear, natural, and concise.
+
+11. Never mention these technical terms to the customer:
+    "context", "retriever", "RAG", "knowledge base",
+    "vector database", "tool", or "tool call".
+
+Conversation_History:
+{Chat_History}
+
+Context:
+{context}
+
+Customer Question:
+{question}
+
+Answer:
+"""  
                         
 promt = PromptTemplate(
     template= promt_text,  
@@ -220,6 +290,20 @@ parellel_chain = RunnableParallel({
 
 RAG_chain = parellel_chain | promt | model | parser
 
+tool_list = [check_availability,add_booking,cansel_booking]
+
+
+#----------------tool bindin-----------------------
+
+llm_with_tools = model.bind_tools([check_availability,add_booking,cansel_booking])
+
+# message ="Please cancel my PR Gym trial booking with booking ID 2."
+# ai_msg = llm_with_tools.invoke(message)
+# print(ai_msg.tool_calls)
+
+# [{'name': 'cansel_booking', 'args': {'booking_id': 2}, 'id': 'chatcmpl-tool-a080ae0ea738418b949e52a272a11bed', 'type': 'tool_call'}]
+
+
 
 print("================================== PR GYM ==================================")
 print("🏋️ Welcome to PR GYM!!")
@@ -234,16 +318,72 @@ while True:
         print("\n🙏 Thank you for visiting PR GYM! Have a nice day! 😊")
         break
     
-    Result = RAG_chain.invoke(User_Query)
+    Chat_History.append(HumanMessage(User_Query))
     
-    Chat_History.append(
-        HumanMessage(content=User_Query)
-    )
+    Ai_message = llm_with_tools.invoke(Chat_History)
     
-    Chat_History.append(
-        AIMessage(content=Result)
-    )
+    if Ai_message.tool_calls :
+        
+        tool_details = Ai_message.tool_calls[0]
+        tool_name    = tool_details["name"]
+        tool_args    = tool_details["args"]
+        tool_call_id = tool_details["id"]
+        
+        Chat_History.append(Ai_message)
+        
+        
+        if tool_name == "check_availability":
+            Result = check_availability.invoke(tool_args)
+           
+        elif tool_name == "add_booking":
+            Result = add_booking.invoke(tool_args)
+            
+        elif tool_name == "cansel_booking":
+            Result = cansel_booking.invoke(tool_args)
+            
+        # print("Tool Result : ", Result)
+        
+        # print("------------------------- enter in tool section --------------------------------- ")
+        # print(f"-------------------------- tool name {tool_name} --------------------------------")
+        # print(f"------------------------------ tool databse answer: {Result}----------------------- \n")
+        
+        # {
+        #     "name": "cansel_booking",
+        #     "args": {"booking_id": 2},
+        #     "id": "chatcmpl-tool-a080ae0ea738418b949e52a272a11bed"
+        # }
+        
+        tool_message = ToolMessage(
+            content=str(Result),
+            tool_call_id=tool_call_id
+        )
+        
+        Chat_History.append(tool_message)
+        
+        # message = [
+        #     HumanMessage(content=User_Query),
+        #     Ai_message,
+        #     tool_message
+        # ]
+    
+        
+        Result= model.invoke(Chat_History)
+        Chat_History.append(Result)
+        
+        print("🤖 Gym AI (Tool Part) :", Result.content)
+        
+    else :
+    
+        Result = RAG_chain.invoke(User_Query)
+    
+        # Chat_History.append(
+        #     HumanMessage(content=User_Query)
+        # )
+        
+        Chat_History.append(
+            AIMessage(content=Result)
+        )
 
-    print("🤖 Gym AI:", Result)
+        print("🤖 Gym AI (RAG part):", Result)
 
 # chatbot done
