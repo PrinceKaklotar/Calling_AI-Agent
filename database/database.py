@@ -1,8 +1,7 @@
+from pathlib import Path
 import sqlite3
 
-#Database connection 
-
-DB_NAME = "gym.db"
+DB_NAME = Path(__file__).resolve().parent / "gym.db"
 
 def get_connection():
     return sqlite3.connect(DB_NAME)
@@ -158,36 +157,36 @@ def cansel_booking(booking_id):
     
 if __name__ == "__main__":
     
-    # create_table()
+    create_table()
 
-    # add_booking(
-    #     "mitul",
-    #     "9876543270",
-    #     "2026-08-26",
-    #     "6:00 PM"
-    # )
+    add_booking(
+        "raju",
+        "9872243270",
+        "2026-08-27",
+        "7:00 PM"
+    )
 
-    # add_booking(
-    #     "Amit",
-    #     "9123456789",
-    #     "2026-08-25",
-    #     "7:00 PM"
-    # )
-    #   add_booking(
-    #             "prince",
-    #             "9876543000",
-    #             "2026-08-26",
-    #             "8:00 PM"
-    #         )
-    # add_booking(
-    #     "jadav bhabha",
-    #     "8123417900",
-    #     "2026-09-01",
-    #     "7:00 PM"
-    # )
+    add_booking(
+        "Amit",
+        "9123456789",
+        "2026-08-25",
+        "7:00 PM"
+    )
+    add_booking(
+                "prince",
+                "9876543000",
+                "2026-08-26",
+                "8:00 PM"
+            )
+    add_booking(
+        "jadav bhabha",
+        "8123417900",
+        "2026-09-01",
+        "7:00 PM"
+    )
     # show_bookings()
     
-    # cansel_booking(40)
+    cansel_booking(40)
 
     show_bookings()
     

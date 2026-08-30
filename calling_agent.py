@@ -26,6 +26,10 @@ from langchain_core.messages import SystemMessage,AIMessage,HumanMessage,ToolMes
 from langchain_core.tools import tool
 from tools.gym_tools import check_availability,add_booking,cansel_booking
 
+# for speech to text and text to speech
+import speech_recognition as sr
+import pyttsx3
+
 #agent
 # from langchain.agents import create_tool_calling_agent, AgentExecutor
 
@@ -308,14 +312,57 @@ llm_with_tools = model.bind_tools([check_availability,add_booking,cansel_booking
 print("================================== PR GYM ==================================")
 print("🏋️ Welcome to PR GYM!!")
 print("🤖 You can talk with our Gym AI Assistant if you have any questions.")
-print("🚪 Type 'exit' or 'quit' to exit the chatbot.\n")
+print("🚪 speack 'exit' or 'stop' or 'bye' to 'quite'.\n")
 
+
+def litsen_to_user():
+    recogniser = sr.Recognizer()
+    
+    try:
+        with sr.Microphone() as source:
+            print("Listening..")
+            
+            audio = recogniser.listen(source)
+            text = recogniser.recognize_google(audio)
+            text = text.lower()
+            print("You said : ", text)
+            return text
+            
+            # if "exit" or "stop" or "quite" in text:
+            #     print("Exiting program")
+    
+    except sr.RequestError as e:
+        print("Could not request results; {0}".format(e))
+        return ""
+
+    except sr.UnknownValueError:
+        print("Could not understand audio")
+        return ""
+
+    except KeyboardInterrupt:
+        print("Program terminated by user")
+        return "exit"
+        
+    
+def speak(text):
+    engine = pyttsx3.init()
+
+    print("🤖 PR Gym:", text)
+
+    engine.say(text)
+    engine.runAndWait()
+    
 
 while True:
-    User_Query = input("💬 Tell me your doubt here: ")
+      # User_Query = input("💬 Tell me your doubt here: ")
+    User_Query = litsen_to_user()
+    
+    if not User_Query:
+        continue
 
-    if User_Query.lower() == 'quit' or User_Query.lower() == 'exit':
+    if User_Query.lower() == 'quit' or User_Query.lower() == 'exit' or User_Query.lower() == 'bye':
         print("\n🙏 Thank you for visiting PR GYM! Have a nice day! 😊")
+        speak("Thank you for visiting PR GYM! Have a nice day!")
         break
     
     Chat_History.append(HumanMessage(User_Query))
@@ -371,6 +418,7 @@ while True:
         Chat_History.append(Result)
         
         print("🤖 Gym AI (Tool Part) :", Result.content)
+        speak(Result.content)
         
     else :
     
@@ -385,5 +433,6 @@ while True:
         )
 
         print("🤖 Gym AI (RAG part):", Result)
+        speak(Result)
 
 # chatbot done
